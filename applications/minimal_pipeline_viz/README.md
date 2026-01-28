@@ -9,12 +9,6 @@ This application demonstrates:
 - **NATS Logging**: Publishes simulation data to a NATS message broker using JSON
 - **Real-time Visualization**: Displays the evolving spin configuration in a web dashboard
 
-**Key Features:**
-- ✅ No build step required - pure Python
-- ✅ YAML configuration for easy parameter tuning
-- ✅ JSON serialization (human-readable, easy to debug)
-- ✅ Real-time updates at 20 Hz
-
 ## How to Run
 
 ### Prerequisites
