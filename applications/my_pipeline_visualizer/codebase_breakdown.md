@@ -49,36 +49,88 @@ The NATS logger system consists of three main components:
 
 ## 🚀 Quick Start: Reusing in Your Application
 
-### Option 1: Share the Visualizer (Recommended for Quick Testing)
+### Two Scenarios: Development vs. Standalone
 
-The **dynamic visualizer** can work with ANY Holoscan app using the same FlatBuffers schema:
+#### Scenario 1: Development Within Holohub (No Copying!)
+
+If you're developing **within the Holohub repository**, the visualizer is truly shared:
 
 ```bash
-# Terminal 1: NATS server (reuse the existing one)
+# Terminal 1: NATS server (one for all apps)
 cd applications/my_pipeline_visualizer
 ./start_nats_server.sh
 
-# Terminal 2: Dynamic visualizer (auto-discovers all streams!)
+# Terminal 2: Dynamic visualizer (works with ALL apps!)
 cd applications/my_pipeline_visualizer/visualizer
 PYTHONPATH=../../build/my_pipeline_visualizer/python/../flatbuffers:$PYTHONPATH \
     python3 visualizer_dynamic.py
 
-# Terminal 3: Your app
-cd /path/to/your_app
-./holohub run your_app
+# Terminal 3: Run ANY Holoscan app in Holohub
+./holohub run your_app_1
+# Or: ./holohub run your_app_2
+# Or: ./holohub run medical_imaging_app
+# etc.
 
 # Browser: http://localhost:8050
-# Enter your subject_prefix (e.g., "my_custom_app")
+# Enter your app's subject_prefix (e.g., "your_app_1")
 # Click "Connect" → See your data!
 ```
 
-**Key Insight**: The dynamic visualizer discovers streams automatically - no configuration needed!
+**Key Insight**: The dynamic visualizer discovers streams automatically - no configuration needed! One visualizer instance works with all apps in your Holohub workspace.
+
+#### Scenario 2: Standalone/Distributed Application (Copy Needed)
+
+If you're creating a **standalone application** to distribute (Docker image, Python package, different machine), you need to copy the visualizer files into your application directory. See "Files You Need to Copy" section below.
 
 ---
 
-## 📋 Files You Need to Copy
+## 📋 Understanding "Shared" vs. "Standalone"
 
-If you're creating a new application and want to include the NATS logger, copy these files:
+### Development in Holohub = Truly Shared
+
+When working **within Holohub**, think of the visualizer like a shared tool in a workshop:
+
+```
+Holohub Workshop:
+├── Tool Cabinet (visualizer/) ← Everyone uses this
+├── Workbench 1 (your_app_1/)  → Points to tool cabinet
+├── Workbench 2 (your_app_2/)  → Points to tool cabinet
+└── Workbench 3 (your_app_3/)  → Points to tool cabinet
+
+No need to duplicate tools!
+```
+
+All apps publish to NATS, one visualizer subscribes to any/all of them.
+
+### Standalone Application = Self-Contained
+
+When creating a **distributable package**:
+
+```
+Standalone Package:
+├── Your App
+├── Visualizer (included)    ← Must include copy
+└── All dependencies
+
+Like a portable toolbox - must contain everything!
+```
+
+**When you need standalone**:
+- 🐳 Docker deployment
+- 📦 Pip/Conda package  
+- 🚢 Shipping to different machines
+- 📤 GitHub release as single artifact
+
+**When shared works**:
+- 🔧 Local development
+- 🧪 Testing multiple apps
+- 👥 Team sharing Holohub repo
+
+---
+
+## 📋 Files You Need to Copy (For Standalone Only)
+
+If you're creating a **standalone/distributable application**, copy these files:
 
 ### Minimal Set (Core NATS Logger)
 
@@ -284,6 +336,147 @@ application:
   publish_rate: 30.0  # 30 Hz
   disable_logger: false
 ```
+
+---
+
+## 🔄 Workflow Comparison
+
+### Workflow A: Shared Visualizer (Holohub Development)
+
+```bash
+# Your project structure
+holohub/
+├── applications/
+│   ├── my_pipeline_visualizer/
+│   │   └── visualizer/              # ← Original location
+│   │       └── visualizer_dynamic.py
+│   └── my_new_app/
+│       ├── python/
+│       │   └── my_app.py            # Your code
+│       └── CMakeLists.txt
+
+# Build your app
+$ ./holohub build my_new_app
+
+# Run your app (Terminal 1)
+$ ./holohub run my_new_app
+
+# Run shared visualizer (Terminal 2)
+$ cd applications/my_pipeline_visualizer/visualizer
+$ python3 visualizer_dynamic.py
+
+# Connect to "my_new_app" in browser ✅
+```
+
+**Pros**: No duplication, easy updates, simple  
+**Cons**: Requires Holohub repo structure
+
+---
+
+### Workflow B: Standalone Application (Independent Distribution)
+
+```bash
+# Your standalone project structure
+my_standalone_app/
+├── src/
+│   └── my_app.py
+├── visualizer/                      # ← Copied from my_pipeline_visualizer
+│   ├── visualizer_dynamic.py
+│   ├── tensor_to_numpy.py
+│   └── ...
+├── nats_logger/                     # ← Copied
+│   ├── cpp/
+│   └── python/
+├── setup.py
+└── Dockerfile
+
+# Build Docker image
+$ docker build -t my_standalone_app .
+
+# Run anywhere (doesn't need Holohub!)
+$ docker run -p 8050:8050 my_standalone_app
+
+# Or install as Python package
+$ pip install ./my_standalone_app
+$ my-app --visualize
+```
+
+**Pros**: Self-contained, distributable, portable  
+**Cons**: Must maintain copy, duplicates code
+
+---
+
+### Workflow C: Best of Both (Python Package)
+
+```bash
+# Create reusable package (one-time)
+holohub/python/holoscan_viz/
+├── setup.py
+├── holoscan_viz/
+│   ├── __init__.py
+│   ├── visualizer.py
+│   └── tensor_utils.py
+
+# Install in development mode
+$ pip install -e holohub/python/holoscan_viz
+
+# Now ANY app can use it
+# my_app_1/my_app.py:
+from holoscan_viz import DynamicVisualizer
+viz = DynamicVisualizer()
+viz.run()
+
+# my_app_2/my_app.py:
+from holoscan_viz import DynamicVisualizer  # Same import!
+viz = DynamicVisualizer()
+viz.run()
+```
+
+**Pros**: Reusable, no copying, updateable via pip  
+**Cons**: Requires packaging setup (one-time effort)
+
+---
+
+## 🧭 Decision Guide: Which Approach Should I Use?
+
+```
+Start here: Are you working within the Holohub repository?
+│
+├─ YES → Use Workflow A (Shared Visualizer)
+│   │     - Run visualizer from my_pipeline_visualizer/visualizer/
+│   │     - No copying needed!
+│   │     - Best for: Development, testing, prototyping
+│   │
+│   └─ Will you distribute this app?
+│       │
+│       ├─ NO → Stick with Workflow A ✅
+│       │
+│       └─ YES → Switch to Workflow B (Copy for distribution)
+│                 - Copy visualizer to your app
+│                 - Package as Docker/pip/etc.
+│
+└─ NO (Outside Holohub) → Use Workflow B (Standalone)
+    │     - Copy all needed files
+    │     - Self-contained application
+    │     - Best for: Production, distribution
+    │
+    └─ Planning multiple standalone apps?
+        │
+        └─ YES → Consider Workflow C (Python Package)
+                  - Create holoscan_viz package
+                  - pip install once, import everywhere
+                  - Best for: Multiple projects, long-term
+```
+
+**Quick Decision Matrix**:
+
+| Your Situation | Best Approach | Copying Needed? |
+|----------------|---------------|-----------------|
+| Developing in Holohub | **Workflow A** (Shared) | ❌ No |
+| Docker deployment | **Workflow B** (Standalone) | ✅ Yes |
+| Multiple standalone apps | **Workflow C** (Package) | ❌ No (pip install) |
+| Quick prototype | **Workflow A** (Shared) | ❌ No |
+| Production system | **Workflow B** or **C** | Depends |
 
 ---
 

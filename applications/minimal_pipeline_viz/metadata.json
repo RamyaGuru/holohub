@@ -1,0 +1,27 @@
+{
+  "application": {
+    "name": "Minimal Pipeline Visualizer",
+    "language": "Python",
+    "version": "1.0",
+    "holoscan_sdk": {
+      "minimum_required_version": "1.0.0"
+    },
+    "default_mode": "pipeline",
+    "modes": {
+      "pipeline": {
+        "description": "Run the Ising model pipeline",
+        "run": {
+          "command": "python3 <holohub_app_source>/python/ising_pipeline.py",
+          "workdir": "holohub_app_source"
+        }
+      },
+      "visualizer": {
+        "description": "Run the web-based visualizer",
+        "run": {
+          "command": "python3 <holohub_app_source>/visualizer/visualizer_json.py",
+          "workdir": "holohub_app_source"
+        }
+      }
+    }
+  }
+}

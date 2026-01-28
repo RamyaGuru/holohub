@@ -1,0 +1,24 @@
+# Ising Model Configuration
+
+ising:
+  # Lattice size (NxN grid)
+  lattice_size: 64
+  
+  # Temperature (controls phase transition)
+  # T < 2.27: Ordered (ferromagnetic)
+  # T > 2.27: Disordered (paramagnetic)
+  temperature: 2.5
+  
+  # Number of Monte Carlo sweeps per frame
+  sweeps_per_frame: 5
+
+nats:
+  # NATS server URL
+  url: "nats://localhost:4222"
+  
+  # NATS subject/topic
+  subject: "ising.data"
+
+pipeline:
+  # Update frequency in Hz
+  frequency: 20
